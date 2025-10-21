@@ -83,6 +83,15 @@ app.get('/health', async (req, res) => {
     // Check database connection
     await prisma.$queryRaw`SELECT 1`;
     
+    // Check if users table exists
+    const tableCheck = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `;
+    
     // Get email service status
     const emailStatus = emailListenerService.getStatus();
     
@@ -91,6 +100,7 @@ app.get('/health', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         database: 'connected',
+        users_table_exists: tableCheck[0]?.exists || false,
         email_sending: 'configured',
         email_receiving: emailStatus.isRunning ? 'active' : 'inactive',
         email_reconnect_attempts: emailStatus.reconnectAttempts,
@@ -103,6 +113,7 @@ app.get('/health', async (req, res) => {
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       error: 'Service unavailable',
+      details: error.message,
     });
   }
 });

@@ -3,7 +3,7 @@ services:
     name: bizbroker-backend
     env: node
     plan: starter
-    buildCommand: npm run deploy
+    buildCommand: npm install && npx prisma generate && npx prisma db push
     startCommand: npm start
     healthCheckPath: /health
     envVars:

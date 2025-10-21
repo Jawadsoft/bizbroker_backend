@@ -1,0 +1,456 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  password              String
+  firstName             String
+  lastName              String
+  title                 String?
+  phone                 String?
+  address               String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  businessName          String?
+  
+  // User Management Fields (from frontend)
+  buyerSellerNDA        Boolean  @default(false)
+  buyerSellerWorksheet  Boolean  @default(false)
+  listingAgreement      ListingAgreementType @default(NA)
+  bizBenId              String?
+  bizBuySellId          String?
+  businessesForSaleId   String?
+  dealStreamId          String?
+  
+  // System fields
+  role                  UserRole @default(CLIENT)
+  status                UserStatus @default(ACTIVE)
+  stage                 String?  // CLD - Lead Active, etc.
+  agentId               String?  // Assigned agent
+  leadSource            String?
+  preferredContact      String?  @default("Email")
+  
+  // Communication tracking
+  lastCommunication     DateTime?
+  lastCommunicationMessage String?
+  
+  // Email webhook tracking
+  emailWebhookSecret    String?   // For receiving emails via webhook
+  
+  // System timestamps
+  isEmailVerified       Boolean  @default(false)
+  lastLogin            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  // Relationships
+  sentEmails           Email[]  @relation("SentEmails")
+  receivedEmails       Email[]  @relation("ReceivedEmails")
+  assignedTasks        Task[]   @relation("AssignedTasks")
+  createdTasks         Task[]   @relation("CreatedTasks")
+  appointments Appointment[] @relation("ClientAppointments")
+  activities           Activity[]
+  notes                Note[]
+  tags                 UserTag[]
+  assignedForms        UserForm[]
+  deals                Deal[]   @relation("UserDeals")
+  files                UserFile[] @relation("UserFiles")
+
+  @@map("users")
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  title     String
+  clientId  String
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  type      AppointmentType @default(VIDEO)
+  location  String?
+  notes     String?
+  status    AppointmentStatus @default(SCHEDULED)
+  
+  // Relations
+  client    User     @relation("ClientAppointments", fields: [clientId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("appointments")
+}
+
+enum AppointmentType {
+  IN_PERSON
+  VIDEO
+  PHONE
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+
+model Email {
+  id            String      @id @default(uuid())
+  subject       String
+  body          String      // Plain text content
+  htmlBody      String?     // Rich text HTML content
+  
+  // Email direction and threading
+  direction     EmailDirection @default(OUTBOUND)
+  threadId      String?     // For email threading
+  inReplyTo     String?     // Message ID this is replying to
+  references    String?     // Email thread references
+  
+  // Participants
+  sender        User        @relation("SentEmails", fields: [senderId], references: [id])
+  senderId      String
+  recipient     User        @relation("ReceivedEmails", fields: [recipientId], references: [id])
+  recipientId   String
+  
+  // Email metadata
+  messageId     String?     // External email service message ID
+  status        EmailStatus @default(SENT)
+  readAt        DateTime?
+  deliveredAt   DateTime?
+  
+  // Attachments
+  attachments   Json?       // Array of file URLs/names
+  
+  // Email provider data
+  providerData  Json?       // Webhook data from email provider
+  
+  sentAt        DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+
+  @@map("emails")
+}
+
+model Task {
+  id            String      @id @default(uuid())
+  title         String
+  description   String?
+  status        TaskStatus  @default(PENDING)
+  priority      TaskPriority @default(MEDIUM)
+  dueDate       DateTime?
+  completedAt   DateTime?
+  relatedTo     String?     // Plan Selection, Onboarding, etc.
+  
+  // Relationships
+  assignedTo    User        @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  assignedToId  String
+  createdBy     User        @relation("CreatedTasks", fields: [createdById], references: [id])
+  createdById   String
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@map("tasks")
+}
+
+model Note {
+  id            String   @id @default(uuid())
+  content       String   // Can store rich text HTML
+  contentType   String   @default("html") // html or plain
+  isInternal    Boolean  @default(false)
+  
+  // Relationships
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String
+  
+  createdBy     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("notes")
+}
+
+model Activity {
+  id            String       @id @default(uuid())
+  type          ActivityType
+  title         String
+  description   String?
+  metadata      Json?        // Additional context data
+  
+  // Relationships
+  user          User         @relation(fields: [userId], references: [id])
+  userId        String
+  
+  performedBy   String       // Who performed this action
+  createdAt     DateTime     @default(now())
+
+  @@map("activities")
+}
+
+model UserTag {
+  id     String @id @default(uuid())
+  name   String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@map("user_tags")
+}
+
+model UserForm {
+  id     String @id @default(uuid())
+  formId String
+  formName String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+
+  @@map("user_forms")
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  subject     String
+  htmlBody    String   // Rich text template
+  variables   String[] // Available variables like {{name}}, {{businessName}}
+  isActive    Boolean  @default(true)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+// Enums
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  STAFF
+  CLIENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum ListingAgreementType {
+  YES
+  NO
+  NA
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum EmailStatus {
+  DRAFT
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  BOUNCED
+}
+
+enum EmailDirection {
+  INBOUND   // Received from user
+  OUTBOUND  // Sent to user
+}
+
+// Add this to your schema.prisma file
+
+enum ActivityType {
+  // User-related activities
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  
+  // Email-related activities
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  EMAIL_OPENED
+  EMAIL_CLICKED
+  
+  // Note-related activities
+  NOTE_ADDED
+  NOTE_UPDATED
+  NOTE_DELETED
+  
+  // Task-related activities
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  TASK_DELETED
+  
+  // Appointment-related activities
+  APPOINTMENT_SCHEDULED
+  APPOINTMENT_UPDATED
+  APPOINTMENT_CANCELLED
+  APPOINTMENT_COMPLETED
+  APPOINTMENT_NO_SHOW
+  
+  // Form-related activities
+  FORM_SUBMITTED
+  FORM_ASSIGNED
+  
+  // Deal-related activities
+  DEAL_CREATED
+  DEAL_UPDATED
+  DEAL_STAGE_COMPLETED
+  DEAL_DOCUMENT_UPLOADED
+  DEAL_DOCUMENT_DELETED
+  DEAL_DOCUMENT_STATUS_UPDATED
+
+  FILE_UPLOADED
+  
+  // System activities
+  LOGIN
+  LOGOUT
+  PROFILE_UPDATED
+}
+
+model Deal {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  status      DealStatus @default(ACTIVE)
+  
+  // Relationships
+  user        User     @relation("UserDeals", fields: [userId], references: [id])
+  userId      String
+  stages      DealStage[]
+  documents   DealDocument[]
+  
+  // System timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("deals")
+}
+
+model DealStage {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  order       Int      // For ordering stages
+  status      StageStatus @default(PENDING)
+  progress    Int      @default(0) // 0-100 percentage
+  
+  // Relationships
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId      String
+  documents   DealDocument[]
+  
+  // System timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("deal_stages")
+}
+
+model DealDocument {
+  id          String   @id @default(uuid())
+  name        String
+  originalName String
+  fileUrl     String   // Cloudinary URL
+  fileSize    Int      // Size in bytes
+  mimeType    String
+  status      DocumentStatus @default(PENDING)
+  
+  // Relationships
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId      String
+  stage       DealStage? @relation(fields: [stageId], references: [id], onDelete: SetNull)
+  stageId     String?
+  
+  // Upload metadata
+  uploadedBy  String   // User ID or name
+  uploadDate  DateTime @default(now())
+  
+  // System timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("deal_documents")
+}
+
+enum DealStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+enum StageStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum DocumentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model UserFile {
+  id          String   @id @default(uuid())
+  name        String
+  originalName String
+  fileUrl     String
+  fileSize    Int
+  mimeType    String
+  uploadedBy  String
+  uploadDate  DateTime @default(now())
+  
+  // Relations
+  userId      String
+  user        User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("user_files")
+}
+
+model Business {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  // Rich text content from CKEditor
+  image       String?  // Image URL
+  state       String   // US State
+  cashflow    Float?   // Cashflow amount
+  review      Float?   // Review rating (1-5)
+  industry    String?  // Industry type
+  address     String?
+  phone       String?
+  email       String?
+  website     String?
+  foundedYear Int?
+  employeeCount Int?
+  
+  // No user relation - businesses are public
+  
+  // System timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("businesses")
+}

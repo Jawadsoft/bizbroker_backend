@@ -1,0 +1,9 @@
+node_modules/
+*.log
+logs/
+uploads/
+dist/
+build/
+.DS_Store
+prisma/migrations/*
+!prisma/migrations/.gitkeep

@@ -8,7 +8,7 @@
     "dev": "nodemon app.js",
     "create-users": "node create-test-users.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx prisma generate && npx prisma migrate deploy",
+    "build": "npx prisma generate && npx prisma migrate deploy || npx prisma db push",
     "postinstall": "npx prisma generate",
     "deploy": "node deploy.js",
     "db:migrate": "npx prisma migrate deploy",

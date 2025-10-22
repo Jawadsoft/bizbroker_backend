@@ -226,12 +226,33 @@ try {
 }
 
 // Start email listener service when app starts
-function startEmailListener() {
+async function startEmailListener() {
   try {
+    // Wait for database to be ready
+    console.log('🔍 Checking database readiness...');
+    await prisma.$queryRaw`SELECT 1`;
+    
+    // Check if users table exists
+    const tableCheck = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'users'
+      );
+    `;
+    
+    if (!tableCheck[0]?.exists) {
+      console.log('❌ Users table not found. Database may not be properly migrated.');
+      console.log('   Please check your database migrations.');
+      return;
+    }
+    
+    console.log('✅ Database is ready');
+    
     // Only start if email configuration is provided
     if (process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD) {
       console.log('🔄 Starting email listener service...');
-      emailListenerService.start();
+      await emailListenerService.start();
     } else {
       console.log('⚠️  Email credentials not configured. Email listening disabled.');
       console.log('   Set EMAIL_USERNAME and EMAIL_PASSWORD in your .env file to enable email receiving.');
@@ -256,5 +277,12 @@ process.on('SIGINT', () => {
 
 // Start email listener after a short delay to ensure app is ready
 setTimeout(startEmailListener, 2000);
+
+// Start the server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Health check available at: http://localhost:${PORT}/health`);
+});
 
 module.exports = app;

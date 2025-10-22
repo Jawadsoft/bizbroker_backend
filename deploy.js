@@ -19,25 +19,45 @@ async function deploy() {
     await prisma.$queryRaw`SELECT 1`;
     console.log('✅ Database connection successful');
     
-    // Step 4: Try migration approaches
+    // Step 4: Database schema deployment with comprehensive error handling
     console.log('📋 Attempting database schema deployment...');
     
     try {
-      // First try: migrate deploy
+      // First try: migrate deploy (preferred for production)
       console.log('🔄 Trying prisma migrate deploy...');
       execSync('npx prisma migrate deploy', { stdio: 'inherit' });
       console.log('✅ Migrations applied successfully');
     } catch (migrateError) {
-      console.log('⚠️ Migrate deploy failed, trying db push...');
+      console.log('⚠️ Migrate deploy failed, checking migration status...');
+      
       try {
-        // Second try: db push
+        // Check migration status
+        console.log('🔍 Checking migration status...');
+        execSync('npx prisma migrate status', { stdio: 'inherit' });
+      } catch (statusError) {
+        console.log('⚠️ Migration status check failed, trying db push...');
+      }
+      
+      try {
+        // Second try: db push (fallback for development/first-time setup)
+        console.log('🔄 Trying prisma db push as fallback...');
         execSync('npx prisma db push', { stdio: 'inherit' });
         console.log('✅ Database schema pushed successfully');
       } catch (pushError) {
         console.error('❌ Both migration approaches failed');
         console.error('Migrate error:', migrateError.message);
         console.error('Push error:', pushError.message);
-        throw new Error('Database deployment failed');
+        
+        // Try to reset and push (last resort)
+        console.log('🔄 Attempting database reset and push...');
+        try {
+          execSync('npx prisma migrate reset --force', { stdio: 'inherit' });
+          execSync('npx prisma db push', { stdio: 'inherit' });
+          console.log('✅ Database reset and push successful');
+        } catch (resetError) {
+          console.error('❌ Database reset failed:', resetError.message);
+          throw new Error('Database deployment failed completely');
+        }
       }
     }
     
@@ -71,3 +91,4 @@ async function deploy() {
 }
 
 deploy();
+

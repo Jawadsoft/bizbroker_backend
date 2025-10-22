@@ -30,3 +30,4 @@ echo "🔧 Regenerating Prisma client..."
 npx prisma generate
 
 echo "🎉 Deployment preparation complete!"
+

@@ -13,6 +13,7 @@ const { emailListenerService } = require('./src/services/emailListener');
   const filesRoutes = require('./src/routes/files')
   const authRoutes = require('./src/routes/auth');
   const businessRoutes = require('./src/routes/businesses');
+  const databaseRoutes = require('./src/routes/database');
 require('dotenv').config();
 
 // Initialize Express app first
@@ -25,7 +26,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS configuration for production and development
 const allowedOrigins = [
-  'https://bizbroker-front.onrender.com',  // Production frontend
+  'https://bizbroker-front.onrender.com',  // Production frontend   
   'http://localhost:3000',                  // Local development
   'http://localhost:8080',                // Alternative local port
   'http://104.236.234.69:3000'             // Previous IP (if still needed)
@@ -215,6 +216,16 @@ app.get('/cors-test', (req, res) => {
   });
 });
 
+// Serve database inspector HTML file
+app.get('/database-inspector', (req, res) => {
+  res.sendFile(__dirname + '/database-inspector.html');
+});
+
+// Serve database inspector HTML file (alternative route)
+app.get('/db-inspector', (req, res) => {
+  res.sendFile(__dirname + '/database-inspector.html');
+});
+
 
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
@@ -223,7 +234,8 @@ app.get('/cors-test', (req, res) => {
   app.use('/api/appointments', appointmentRoutes);
   app.use('/api/deals', dealsRoutes);
   app.use('/api/files', filesRoutes);
-  app.use('/api/businesses', businessRoutes); 
+  app.use('/api/businesses', businessRoutes);
+  app.use('/api/db', databaseRoutes); 
 
 // Welcome route
 app.get('/', (req, res) => {
@@ -233,9 +245,13 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       test: '/test',
+      cors_test: '/cors-test',
+      database_inspector: '/database-inspector',
+      db_inspector: '/db-inspector',
       users: '/api/users',
       email_status: '/api/email/status',
-      email_sync: '/api/email/sync'
+      email_sync: '/api/email/sync',
+      database_api: '/api/db'
     }
   });
 });

@@ -35,6 +35,8 @@ services:
         sync: false
       - key: AUTH0_CLIENT_SECRET
         sync: false
+      - key: FRONTEND_URL
+        value: https://bizbroker-front.onrender.com
 
 databases:
   - name: bizbroker-db

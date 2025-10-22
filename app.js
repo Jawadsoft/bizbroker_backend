@@ -23,12 +23,36 @@ const prisma = new PrismaClient();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// app.use(cors({
-//   origin: 'http://104.236.234.69:3000',
-//   credentials: true,
-//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-// }));
+// CORS configuration for production and development
+const allowedOrigins = [
+  'https://bizbroker-front.onrender.com',  // Production frontend
+  'http://localhost:3000',                  // Local development
+  'http://localhost:8080',                // Alternative local port
+  'http://104.236.234.69:3000'             // Previous IP (if still needed)
+];
+
+// Add environment variable for additional origins
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200 // For legacy browser support
+}));
 
 // Security middleware
 app.use(helmet({
@@ -178,6 +202,16 @@ app.get('/test', (req, res) => {
   res.json({ 
     message: 'Server is working!',
     timestamp: new Date().toISOString()
+  });
+});
+
+// CORS test endpoint
+app.get('/cors-test', (req, res) => {
+  res.json({
+    message: 'CORS is working!',
+    origin: req.headers.origin,
+    timestamp: new Date().toISOString(),
+    allowedOrigins: allowedOrigins
   });
 });
 

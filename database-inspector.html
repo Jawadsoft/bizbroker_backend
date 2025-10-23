@@ -396,9 +396,20 @@
                 </div>
             </div>
 
+            <!-- Database Migration -->
+            <div class="section">
+                <h2>🚀 Database Migration</h2>
+                <div id="migration-status" class="status loading">
+                    <span class="loading-spinner"></span> Checking migration status...
+                </div>
+                <button class="btn btn-success" onclick="runMigration()">🚀 Run Database Migration</button>
+                <button class="btn" onclick="checkMigrationStatus()">🔍 Check Migration Status</button>
+                <div id="migration-result"></div>
+            </div>
+
             <!-- Database Management -->
             <div class="section">
-                <h2>🚀 Database Management</h2>
+                <h2>🛠️ Database Management</h2>
                 <button class="btn btn-success" onclick="createTestData()">➕ Create Test Data</button>
                 <button class="btn btn-warning" onclick="resetDatabase()">🔄 Reset Database</button>
                 <button class="btn btn-danger" onclick="deleteAllData()">🗑️ Delete All Data</button>
@@ -415,6 +426,7 @@
             checkDatabaseHealth();
             loadTablesList();
             loadDatabaseStats();
+            checkMigrationStatus();
         });
 
         // Check database health
@@ -745,6 +757,91 @@
                 loadTablesList();
             } catch (error) {
                 resultDiv.innerHTML = `<div class="alert alert-danger">Error deleting data: ${error.message}</div>`;
+            }
+        }
+
+        // Check migration status
+        async function checkMigrationStatus() {
+            const statusDiv = document.getElementById('migration-status');
+            statusDiv.innerHTML = '<div class="status loading"><span class="loading-spinner"></span> Checking migration status...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/db/migration-status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.isComplete) {
+                        statusDiv.innerHTML = `
+                            <div class="alert alert-success">
+                                ✅ Database migration is complete!<br>
+                                <strong>Tables found:</strong> ${data.tables.length}<br>
+                                <strong>Expected tables:</strong> ${data.expectedTables.length}<br>
+                                <strong>Status:</strong> All tables are present
+                            </div>
+                        `;
+                    } else {
+                        statusDiv.innerHTML = `
+                            <div class="alert alert-warning">
+                                ⚠️ Database migration needed!<br>
+                                <strong>Tables found:</strong> ${data.tables.length}<br>
+                                <strong>Missing tables:</strong> ${data.missingTables.length}<br>
+                                <strong>Missing:</strong> ${data.missingTables.join(', ')}
+                            </div>
+                        `;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to check migration status');
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Failed to check migration status!<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Run database migration
+        async function runMigration() {
+            if (!confirm('Are you sure you want to run the database migration? This will create all necessary tables.')) {
+                return;
+            }
+
+            const resultDiv = document.getElementById('migration-result');
+            resultDiv.innerHTML = '<div class="status loading"><span class="loading-spinner"></span> Running database migration...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/db/migrate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Database migration completed successfully!<br>
+                            <strong>Tables created:</strong> ${data.tableCount}<br>
+                            <strong>Tables:</strong> ${data.tablesCreated.join(', ')}
+                        </div>
+                    `;
+                    
+                    // Refresh everything
+                    checkMigrationStatus();
+                    loadDatabaseStats();
+                    loadTablesList();
+                } else {
+                    throw new Error(data.error || 'Migration failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Migration failed!<br>
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
             }
         }
     </script>

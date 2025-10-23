@@ -138,3 +138,4 @@ The database inspector is automatically included when you deploy your backend:
 - **Documentation**: Visual representation of your database schema
 
 The database inspector provides a powerful, user-friendly interface for managing and monitoring your Bizbroker database, similar to professional database administration tools!
+

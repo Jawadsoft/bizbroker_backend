@@ -61,8 +61,9 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'"], // Strict CSP for security
       imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"], // Allow fetch requests to same origin
     },
   },
 }));
@@ -216,13 +217,21 @@ app.get('/cors-test', (req, res) => {
   });
 });
 
-// Serve database inspector HTML file
+// Serve database inspector HTML file with relaxed CSP
 app.get('/database-inspector', (req, res) => {
+  // Temporarily disable CSP for database inspector
+  res.set({
+    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self';"
+  });
   res.sendFile(__dirname + '/database-inspector.html');
 });
 
 // Serve database inspector HTML file (alternative route)
 app.get('/db-inspector', (req, res) => {
+  // Temporarily disable CSP for database inspector
+  res.set({
+    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self';"
+  });
   res.sendFile(__dirname + '/database-inspector.html');
 });
 

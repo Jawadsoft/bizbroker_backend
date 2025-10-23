@@ -680,5 +680,135 @@ router.get('/migration-status', async (req, res) => {
   }
 });
 
+// Create a specific user
+router.post('/create-user', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, role = 'ADMIN' } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and password are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'User with this email already exists'
+      });
+    }
+
+    // Hash the password
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the user with all necessary fields
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        firstName: firstName || 'Admin',
+        lastName: lastName || 'User',
+        role: role,
+        status: 'ACTIVE',
+        stage: 'Active',
+        isEmailVerified: true,
+        preferredContact: 'Email',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      message: 'User created successfully',
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create user',
+      message: error.message
+    });
+  }
+});
+
+// Create the specific user you requested
+router.post('/create-admin-user', async (req, res) => {
+  try {
+    const email = 'ali@gmail.com';
+    const password = 'admin786@';
+    
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+
+    if (existingUser) {
+      return res.json({
+        success: true,
+        message: 'Admin user already exists',
+        user: {
+          id: existingUser.id,
+          email: existingUser.email,
+          firstName: existingUser.firstName,
+          lastName: existingUser.lastName,
+          role: existingUser.role,
+          status: existingUser.status
+        }
+      });
+    }
+
+    // Hash the password
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create the admin user
+    const user = await prisma.user.create({
+      data: {
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        firstName: 'Ali',
+        lastName: 'Admin',
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        stage: 'Active',
+        isEmailVerified: true,
+        preferredContact: 'Email',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+
+    // Remove password from response
+    const { password: _, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      message: 'Admin user created successfully',
+      user: userWithoutPassword
+    });
+
+  } catch (error) {
+    console.error('Error creating admin user:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create admin user',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
 

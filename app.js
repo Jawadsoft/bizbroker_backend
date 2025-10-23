@@ -26,7 +26,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS configuration for production and development
 const allowedOrigins = [
-  'https://bizbroker-front.onrender.com',  // Production frontend   
+  'https://bizbroker-front.onrender.com',  // Production frontend
+  'https://bizbroker-backend.onrender.com', // Backend itself (for database inspector)
   'http://localhost:3000',                  // Local development
   'http://localhost:8080',                // Alternative local port
   'http://104.236.234.69:3000'             // Previous IP (if still needed)
@@ -37,18 +38,13 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
+// Add backend URL for same-origin requests
+if (process.env.BACKEND_URL) {
+  allowedOrigins.push(process.env.BACKEND_URL);
+}
+
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
